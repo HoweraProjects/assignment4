@@ -35,7 +35,7 @@ The graph follows the required assignment contract:
 
 ## Screenshots (Key Nodes and Relationships)
 
-Please replace the placeholders below with your actual Neo4j screenshots before submission.
+The following screenshots are captured from Neo4j Browser after running `build_kg.py`.
 
 ### Graph Overview
 
