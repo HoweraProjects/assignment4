@@ -1,74 +1,87 @@
-# 🛠️ Prerequisites
-Before you begin, ensure you have the following installed:
+# Assignment 4 - KG-based QA for NCU Regulations
 
-* Python 3.11 (Strict requirement) 
+This project builds a Knowledge Graph (KG) from NCU regulation PDFs, retrieves relevant rule evidence from Neo4j, and returns grounded answers.
 
-* Docker Desktop (Required to run the Neo4j database)
+## KG Schema Design
 
-* Internet access for first-time HuggingFace model download (local model will be cached)
-# ⚙️ Environment Setup
-### 1. Database Setup (Neo4j via Docker)
+The graph follows the required assignment contract:
 
-You must run a local Neo4j instance using Docker. Run the following command in your terminal:
+- `(:Regulation)-[:HAS_ARTICLE]->(:Article)-[:CONTAINS_RULE]->(:Rule)`
+- `Article` properties:
+  - `number`
+  - `content`
+  - `reg_name`
+  - `category`
+- `Rule` properties:
+  - `rule_id`
+  - `type`
+  - `action`
+  - `result`
+  - `art_ref`
+  - `reg_name`
+- Fulltext indexes:
+  - `article_content_idx`
+  - `rule_idx`
 
-` docker run -d --name neo4j -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:latest `
+### Design Notes
 
-Explanation of flags:
+- `Regulation` stores document-level metadata.
+- `Article` stores full article text to preserve legal context.
+- `Rule` stores granular statements extracted from article sentences for higher retrieval precision.
+- Query flow uses typed + broad retrieval:
+  - Typed: query `rule_idx` directly for rule-focused evidence.
+  - Broad: query `article_content_idx`, then route to connected `Rule` nodes.
+- Final answers always cite source regulation and article.
 
-* -d: Runs the container in detached mode (background).
+## Screenshots (Key Nodes and Relationships)
 
-*  -p 7474:7474: Exposes the web interface port (Browser).
+Please replace the placeholders below with your actual Neo4j screenshots before submission.
 
-*  -p 7687:7687: Exposes the Bolt protocol port (Python connection).
+### Graph Overview
 
-*  -e NEO4J_AUTH=...: Sets the username (neo4j) and password (password).
+![Graph overview](docs/screenshots/graph-overview.png)
 
-Verification: After running the command, check if the database is ready:
+### Regulation -> Article -> Rule Links
 
-1. Open your browser and go to http://localhost:7474.
+![Schema links](docs/screenshots/schema-links.png)
 
-2. Login with user: neo4j and password: password.
+### Rule Node Properties
 
-### 2. Virtual Environment Setup
+![Rule properties](docs/screenshots/rule-properties.png)
 
-It is highly recommended to use a virtual environment to manage dependencies.
+## Setup
 
-**For macOS / Linux:**
+### 1) Start Neo4j (Docker)
+
+```bash
+docker run -d --name neo4j -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:latest
 ```
-# Create virtual environment
-python -m venv venv
 
-# Activate environment
-source venv/bin/activate
-```
-**For Windows:**
-```
-# Create virtual environment
-python -m venv venv
+### 2) Install dependencies
 
-# Activate environment
-venv\Scripts\activate
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### 3. Install Dependencies
+## Run Pipeline
 
-`pip install -r requirements.txt`
+Run in repository root:
 
-# 📂 File Descriptions
+```bash
+python setup_data.py
+python build_kg.py
+python query_system.py
+python auto_test.py
+```
 
-* **source/:** Folder containing raw English PDF regulations
-* **setup_data.py:** Parses PDFs using pdfplumber and Regex, cleans the text, and stores structured data into a local SQLite database
-* **build_kg.py:** Reads from SQLite and executes Cypher queries to create nodes (Regulation, Article) and relationships (HAS_ARTICLE) in Neo4j.
-* **query_system.py:** The interactive chatbot. It retrieves full regulation context and uses the LLM to generate answers.
-* **auto_test.py:** Runs benchmark questions in test_data.json and uses an "LLM-as-a-Judge" to score your system (Pass/Fail).
+## Files Included
 
-# 🚀 Execution Order
-**make sure you have already run neo4j in docker**
-**run commands in this repository root folder**
-1. `python setup_data.py`
-2. `python build_kg.py`
-3. (Not necessary)`python query_system.py`: Test your system manually to see if it answers correctly.
-4. `python auto_test.py`: run the benchmark test  
-
-
-
+- `README.md` (this report)
+- `auto_test.py`
+- `build_kg.py`
+- `llm_loader.py`
+- `query_system.py`
+- `requirements.txt`
+- `.gitignore`
